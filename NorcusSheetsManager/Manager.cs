@@ -239,7 +239,7 @@ namespace NorcusSheetsManager
             try
             {
                 var images = _GetImagesForPdf(pdfFile);
-                bool imgsAreOlder = images.Any(i => (i.CreationTimeUtc < pdfFile.CreationTimeUtc) || (i.CreationTimeUtc < pdfFile.LastWriteTimeUtc));
+                bool imgsAreOlder = images.Any(i => i.LastWriteTimeUtc < pdfFile.LastWriteTimeUtc);
                 if (imgsAreOlder || forceDeleteAndConvert)
                 {
                     foreach (var image in images)
