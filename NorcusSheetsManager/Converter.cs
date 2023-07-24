@@ -66,9 +66,15 @@ namespace NorcusSheetsManager
                 Format = MagickFormat.Pdf
             };
         }
-        public bool Convert(FileInfo pdfFile)
+        /// <summary>
+        /// Converts <paramref name="pdfFile"/> into images.
+        /// </summary>
+        /// <param name="pdfFile"></param>
+        /// <returns>Files created</returns>
+        /// <exception cref="FormatException"></exception>
+        public IEnumerable<FileInfo> Convert(FileInfo pdfFile)
         {
-            if (!pdfFile.Exists) return false;
+            if (!pdfFile.Exists) return Enumerable.Empty<FileInfo>();
             if (pdfFile.Extension.ToLower() != ".pdf")
                 throw new FormatException("Input file must be PDF");
 
@@ -76,7 +82,7 @@ namespace NorcusSheetsManager
 
             string outFileNoExt = Path.Combine(pdfFile.Directory.FullName, Path.GetFileNameWithoutExtension(pdfFile.FullName));
             string outExtension = "." + OutFileFormat.ToString().ToLower();
-            int imagesCount = 0;
+            List<FileInfo> result = new List<FileInfo>();
             
             using (var images = new MagickImageCollection())
             {
@@ -93,11 +99,12 @@ namespace NorcusSheetsManager
                     fileStream = pdfFile.Open(FileMode.Open);
                 }
                 images.Read(fileStream, _magickReadSettings);
-                imagesCount = images.Count;
+
                 if (images.Count == 1)
                 {
                     _ModifyImage(images[0]);
                     images[0].Write(outFileNoExt + outExtension, OutFileFormat);
+                    result.Add(new FileInfo(outFileNoExt + outExtension));
                 }
                 else if (images.Count > 1)
                 {
@@ -106,16 +113,18 @@ namespace NorcusSheetsManager
                     {
                         image.Format = OutFileFormat;
                         _ModifyImage(image);
-                        image.Write(outFileNoExt + MultiPageDelimiter + _GetCounter(page) + outExtension);
+                        string fname = outFileNoExt + MultiPageDelimiter + _GetCounter(page) + outExtension;
+                        image.Write(fname, OutFileFormat);
+                        result.Add(new FileInfo(fname));
                         page++;
                     }
                 }
-                else return false;
+                else return Enumerable.Empty<FileInfo>();
                 fileStream.Close();
             }
-            Logger.Debug($"{pdfFile.FullName} was converted into {imagesCount} {OutFileFormat} image"
-                + (imagesCount > 1 ? "s." : "."), _logger);
-            return true;
+            Logger.Debug($"{pdfFile.FullName} was converted into {result.Count} {OutFileFormat} image"
+                + (result.Count > 1 ? "s." : "."), _logger);
+            return result;
         }
         public bool TryGetPdfPageCount(FileInfo pdfFile, out int pageCount)
         {

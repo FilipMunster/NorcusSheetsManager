@@ -12,6 +12,7 @@ using ImageMagick.Formats;
 using System.Diagnostics;
 using System.Reflection;
 using System.Collections.ObjectModel;
+using System.Timers;
 
 namespace NorcusSheetsManager
 {
@@ -19,11 +20,19 @@ namespace NorcusSheetsManager
     {
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         private Converter _Converter { get; set; }
-        private FileSystemWatcher _FileSystemWatcher { get; set; }
+        private List<FileSystemWatcher> _FileSystemWatchers { get; set; }
+        private bool _IsWatcherEnabled { get; set; }
+        private bool _ScanningInProgress { get; set; }
         public IConfig Config { get; private set; }
         public Manager()
         {
             Config = ConfigLoader.Load();
+            if (String.IsNullOrEmpty(Config.SheetsPath))
+            {
+                Exception e = new ArgumentNullException(nameof(Config.SheetsPath));
+                Logger.Error(e, _logger);
+                throw e;
+            }
 
             _Converter = new Converter()
             {
@@ -35,51 +44,84 @@ namespace NorcusSheetsManager
                 TransparentBackground = Config.TransparentBackground,
                 CropImage = Config.CropImage
             };
-            _FileSystemWatcher = _CreateFileSystemWatcher();
+            _CreateFileSystemWatchers();
         }
-        private FileSystemWatcher _CreateFileSystemWatcher()
+        /// <summary>
+        /// Vytvoří FileSystemWatchers pro každou složku s notami. Kontroluje pouze první úroveň každé složky.
+        /// </summary>
+        private void _CreateFileSystemWatchers()
         {
-            FileSystemWatcher watcher = new FileSystemWatcher
+            _FileSystemWatchers = new List<FileSystemWatcher>();
+            var directories = Directory.GetDirectories(Config.SheetsPath);
+            foreach (var dir in directories)
             {
-                Path = Config.FilesPath,
-                IncludeSubdirectories = Config.IncludeSubdirectories,
-                NotifyFilter = NotifyFilters.CreationTime |
-                                NotifyFilters.DirectoryName |
-                                NotifyFilters.FileName |
-                                NotifyFilters.LastWrite
-            };
-            foreach (string ext in Config.WatchedExtensions)
-            {
-                watcher.Filters.Add("*" + ext);
-            }
-            watcher.Changed += Watcher_Changed;
-            watcher.Created += Watcher_Created;
-            watcher.Renamed += Watcher_Renamed;
-            watcher.Deleted += Watcher_Deleted;
+                FileSystemWatcher watcher = new FileSystemWatcher
+                {
+                    Path = dir,
+                    IncludeSubdirectories = false,
+                    NotifyFilter = NotifyFilters.CreationTime |
+                    NotifyFilters.DirectoryName |
+                    NotifyFilters.FileName |
+                    NotifyFilters.LastWrite,
+                    EnableRaisingEvents = true
+                };
+                foreach (string ext in Config.WatchedExtensions)
+                {
+                    watcher.Filters.Add("*" + ext);
+                }
+                watcher.Changed += Watcher_Changed;
+                watcher.Created += Watcher_Created;
+                watcher.Renamed += Watcher_Renamed;
+                watcher.Deleted += Watcher_Deleted;
 
-            return watcher;
+                _FileSystemWatchers.Add(watcher);
+            }
         }
 
         public void StartWatching(bool verbose = false)
         {
-            _FileSystemWatcher.EnableRaisingEvents = true;
+            _IsWatcherEnabled = true;
             if (verbose) Logger.Debug($"File system watcher started.", _logger);
         }
         public void StopWatching(bool verbose = false)
         {
-            _FileSystemWatcher.EnableRaisingEvents = false;
+            _IsWatcherEnabled = false;
             if (verbose) Logger.Debug($"File system watcher stoppped.", _logger);
+        }
+        public void AutoFullScan(double interval, int repeats)
+        {
+            System.Timers.Timer timer = new System.Timers.Timer(interval);
+            int hitCount = 0;
+            timer.Elapsed += (sender, e) =>
+            {
+                Logger.Debug("Autoscan:", _logger);
+                if (_ScanningInProgress) 
+                { 
+                    Logger.Debug("Autoscan skipped (scanning already running).", _logger);
+                    return;
+                }
+                hitCount++;
+                FullScan();
+
+                if (hitCount >= repeats)
+                {
+                    ((System.Timers.Timer)sender).Stop();
+                    ((System.Timers.Timer)sender).Dispose();
+                    Logger.Debug("Autoscan finished.", _logger);
+                    return;
+                }
+            };
+            timer.Start();
         }
         public void FullScan()
         {
             StopWatching();
-            Logger.Debug($"Scanning all PDF files in {Config.FilesPath}.", _logger);
+            _ScanningInProgress = true;
+            Logger.Debug($"Scanning all PDF files in {Config.SheetsPath}.", _logger);
             if (Config.FixGDriveNaming) _FixAllGoogleFiles();
-            FileInfo[] pdfFiles = Directory.GetFiles(Config.FilesPath, "*.pdf", SearchOption.AllDirectories)
-                .Select(f => new FileInfo(f))
-                .ToArray();
+            var pdfFiles = _GetPdfFiles();
 
-            Logger.Debug($"Found {pdfFiles.Length} PDF files in {Config.FilesPath}.", _logger);
+            Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
 
             int convertCounter = 0;
             foreach (FileInfo pdfFile in pdfFiles)
@@ -89,6 +131,7 @@ namespace NorcusSheetsManager
             }
 
             Logger.Debug($"{convertCounter} file(s) converted to {Config.OutFileFormat}.", _logger);
+            _ScanningInProgress = false;
             StartWatching();
         }
         /// <summary>
@@ -97,13 +140,12 @@ namespace NorcusSheetsManager
         public void DeepScan()
         {
             StopWatching();
-            Logger.Debug($"Deep scanning all PDF files in {Config.FilesPath}.", _logger);
+            _ScanningInProgress = true;
+            Logger.Debug($"Deep scanning all PDF files in {Config.SheetsPath}.", _logger);
             if (Config.FixGDriveNaming) _FixAllGoogleFiles();
-            FileInfo[] pdfFiles = Directory.GetFiles(Config.FilesPath, "*.pdf", SearchOption.AllDirectories)
-                .Select(f => new FileInfo(f))
-                .ToArray();
+            var pdfFiles = _GetPdfFiles();
 
-            Logger.Debug($"Found {pdfFiles.Length} PDF files in {Config.FilesPath}.", _logger);
+            Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
 
             int convertCounter = 0;
             foreach (FileInfo pdfFile in pdfFiles)
@@ -124,6 +166,7 @@ namespace NorcusSheetsManager
             }
 
             Logger.Debug($"{convertCounter} file(s) converted to {Config.OutFileFormat}.", _logger);
+            _ScanningInProgress = false;
             StartWatching();
         }
         /// <summary>
@@ -132,13 +175,12 @@ namespace NorcusSheetsManager
         public void ForceConvertAll()
         {
             StopWatching();
-            Logger.Debug($"Force converting all PDF files in {Config.FilesPath}.", _logger);
+            _ScanningInProgress = true;
+            Logger.Debug($"Force converting all PDF files in {Config.SheetsPath}.", _logger);
             if (Config.FixGDriveNaming) _FixAllGoogleFiles();
-            FileInfo[] pdfFiles = Directory.GetFiles(Config.FilesPath, "*.pdf", SearchOption.AllDirectories)
-                .Select(f => new FileInfo(f))
-                .ToArray();
+            var pdfFiles = _GetPdfFiles();
 
-            Logger.Debug($"Found {pdfFiles.Length} PDF files in {Config.FilesPath}.", _logger);
+            Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
 
             int convertCounter = 0;
             foreach (FileInfo pdfFile in pdfFiles)
@@ -148,24 +190,28 @@ namespace NorcusSheetsManager
             }
 
             Logger.Debug($"{convertCounter} file(s) converted to {Config.OutFileFormat}.", _logger);
+            _ScanningInProgress = false;
             StartWatching();
         }
         private void _FixAllGoogleFiles()
         {
-            StopWatching();
-            GDriveFix.FixAllFiles(Config.FilesPath, SearchOption.AllDirectories, false, Config.WatchedExtensions);
-            StartWatching();
+            bool isWatcherActive = _IsWatcherEnabled;
+            if (isWatcherActive) StopWatching();
+            GDriveFix.FixAllFiles(Config.SheetsPath, SearchOption.AllDirectories, false, Config.WatchedExtensions);
+            if (isWatcherActive) StartWatching();
         }
         private string _FixGoogleFile(string fullFileName)
         {
-            StopWatching();
+            bool isWatcherActive = _IsWatcherEnabled;
+            if (isWatcherActive) StopWatching();
             string newFileName = GDriveFix.FixFile(fullFileName, false);
-            StartWatching();
+            if (isWatcherActive) StartWatching();
             return newFileName;
         }
 
         private void Watcher_Renamed(object sender, RenamedEventArgs e)
         {
+            if (!_IsWatcherEnabled) return;
             Logger.Debug($"Detected: {e.OldFullPath} was renamed to {e.FullPath}.", _logger);
 
             // Pokud se jedná o fixnutý název google souboru, potřebuji znovu převést pdf:
@@ -181,6 +227,7 @@ namespace NorcusSheetsManager
 
         private void Watcher_Created(object sender, FileSystemEventArgs e)
         {
+            if (!_IsWatcherEnabled) return;
             string fullPath = e.FullPath;
             Logger.Debug($"Detected: {fullPath} was created.", _logger);
             if (Config.FixGDriveNaming && Regex.IsMatch(fullPath, GDriveFix.GDriveFile.VerPattern))
@@ -193,26 +240,28 @@ namespace NorcusSheetsManager
 
         private void Watcher_Changed(object sender, FileSystemEventArgs e)
         {
+            if (!_IsWatcherEnabled) return;
             FileInfo pdfFile = new FileInfo(e.FullPath);
-            if (pdfFile.Extension != ".pdf") return;
+            if (pdfFile.Extension != ".pdf" || !pdfFile.Exists) return;
 
             Logger.Debug($"Detected: {pdfFile} has changed.", _logger);
             _DeleteOlderAndConvert(pdfFile);
         }
         private void Watcher_Deleted(object sender, FileSystemEventArgs e)
         {
+            if (!_IsWatcherEnabled) return;
             string fullPath = e.FullPath;
             Logger.Debug($"Detected: {fullPath} was deleted.", _logger);
-            if (Config.FixGDriveNaming && Regex.IsMatch(fullPath, GDriveFix.GDriveFile.VerPattern))
-            {
-                StopWatching();
-                fullPath = _FixGoogleFile(fullPath);
-                StartWatching();
-            }
+            //if (Config.FixGDriveNaming && Regex.IsMatch(fullPath, GDriveFix.GDriveFile.VerPattern))
+            //{
+            //    StopWatching();
+            //    fullPath = _FixGoogleFile(fullPath);
+            //    StartWatching();
+            //}
 
-            FileInfo file = new FileInfo(fullPath);
-            if (file.Extension == ".pdf")
-                _DeleteOlderAndConvert(file, true);
+            //FileInfo file = new FileInfo(fullPath);
+            //if (file.Extension == ".pdf")
+            //    _DeleteOlderAndConvert(file, true);
         }
 
         private FileInfo[] _GetImagesForPdf(FileInfo pdfFile)
@@ -250,7 +299,9 @@ namespace NorcusSheetsManager
                 }
                 if (images.Length == 0 || imgsAreOlder || forceDeleteAndConvert)
                 {
-                    _Converter.Convert(pdfFile);
+                    var createdImages = _Converter.Convert(pdfFile);
+                    _SyncFileTimes(pdfFile, createdImages);
+                    if (Config.MovePdfToSubfolder) _MovePdfToSubfolder(pdfFile);
                     return true;
                 }
                 else return false;
@@ -284,6 +335,54 @@ namespace NorcusSheetsManager
             {
                 Logger.Error(ex, _logger);
             }
+        }
+        private void _SyncFileTimes(FileInfo source, IEnumerable<FileInfo> targets)
+        {
+            foreach (var target in targets)
+            {
+                target.CreationTime = source.CreationTime;
+                target.CreationTimeUtc = source.CreationTimeUtc;
+                target.LastAccessTime = source.LastAccessTime;
+                target.LastAccessTimeUtc = source.LastAccessTimeUtc;
+                target.LastWriteTime = source.LastWriteTime;
+                target.LastWriteTimeUtc = source.LastWriteTimeUtc;
+            }
+        }
+        private void _MovePdfToSubfolder(FileInfo pdfFile)
+        {
+            if (!pdfFile.Exists) return;
+
+            string sourceFile = pdfFile.FullName;
+            string newPath = Path.Combine(Path.GetDirectoryName(pdfFile.FullName), Config.PdfSubfolder);
+            if (!Directory.Exists(newPath))
+            {
+                Directory.CreateDirectory(newPath);
+
+            }
+
+            string targetFile = Path.Combine(newPath, pdfFile.Name);
+            try
+            {
+                File.Move(sourceFile, targetFile, true);
+                Logger.Debug($"File {sourceFile} was moved to {Config.PdfSubfolder} subfolder.", _logger);
+            }
+            catch (Exception e)
+            {
+                Logger.Warn($"File {sourceFile} could not be moved to {Config.PdfSubfolder} subfolder.", _logger);
+                Logger.Warn(e, _logger);
+            }
+        }
+        private IEnumerable<FileInfo> _GetPdfFiles()
+        {
+            var directories = Directory.GetDirectories(Config.SheetsPath);
+            List<FileInfo> pdfFiles = new List<FileInfo>();
+
+            foreach (var dir in directories)
+            {
+                pdfFiles.AddRange(Directory.GetFiles(dir, "*.pdf", SearchOption.TopDirectoryOnly)
+                    .Select(f => new FileInfo(f)));
+            }
+            return pdfFiles;
         }
     }
 }

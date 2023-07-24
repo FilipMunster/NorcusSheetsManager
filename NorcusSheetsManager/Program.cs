@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,6 +16,7 @@ namespace AutoPdfToImage
             Manager manager = new Manager();
             manager.FullScan();
             manager.StartWatching(true);
+            manager.AutoFullScan(60000, 5);
 
             string commandMessage = "Commands:\n" +
                 "\tS - scan all PDF files (checks whether all PDFs have any image)\n" +

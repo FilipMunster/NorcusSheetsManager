@@ -68,8 +68,7 @@ namespace NorcusSheetsManager
         private static Config _GetDefaultConfig() =>
             new Config()
             {
-                FilesPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
-                IncludeSubdirectories = true,
+                SheetsPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
                 RunOnStartup = true,
                 OutFileFormat = MagickFormat.Png,
                 MultiPageDelimiter = "-",
@@ -78,22 +77,25 @@ namespace NorcusSheetsManager
                 DPI = 200,
                 TransparentBackground = false,
                 CropImage = true,
+                MovePdfToSubfolder = true,
+                PdfSubfolder = "PDF",
                 FixGDriveNaming = true,
-                WatchedExtensions = new[] { ".pdf", ".jpg", ".png", ".gif" }
+                WatchedExtensions = new[] { ".pdf", ".jpg", ".png", ".txt" }
             };
 
         public class Config : IConfig
         {
-            public string FilesPath { get; set; }
-            public bool IncludeSubdirectories { get; set; }
+            public string? SheetsPath { get; set; }
             public bool RunOnStartup { get; set; }
             public MagickFormat OutFileFormat { get; set; }
-            public string MultiPageDelimiter { get; set; }
+            public string MultiPageDelimiter { get; set; } = "";
             public int MultiPageCounterLength { get; set; }
             public int MultiPageInitNumber { get; set; }
             public int DPI { get; set; }
             public bool TransparentBackground { get; set; }
             public bool CropImage { get; set; }
+            public bool MovePdfToSubfolder { get; set; }
+            public string PdfSubfolder { get; set; }
             public bool FixGDriveNaming { get; set; }
             public string[] WatchedExtensions { get; set; }
         }

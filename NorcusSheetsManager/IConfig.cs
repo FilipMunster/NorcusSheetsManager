@@ -9,8 +9,7 @@ namespace NorcusSheetsManager
 {
     public interface IConfig
     {
-        string FilesPath { get; set; }
-        bool IncludeSubdirectories { get; set; }
+        string SheetsPath { get; set; }
         bool RunOnStartup { get; set; }
         MagickFormat OutFileFormat { get; set; }
         string MultiPageDelimiter { get; set; }
@@ -19,6 +18,8 @@ namespace NorcusSheetsManager
         int DPI { get; set; }
         bool TransparentBackground { get; set; }
         bool CropImage { get; set; }
+        bool MovePdfToSubfolder { get; set; }
+        string PdfSubfolder { get; set; }
         bool FixGDriveNaming { get; set; }
         string[] WatchedExtensions { get; set; }
     }
