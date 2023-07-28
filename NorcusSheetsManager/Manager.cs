@@ -105,8 +105,9 @@ namespace NorcusSheetsManager
 
                 if (hitCount >= repeats)
                 {
-                    ((System.Timers.Timer)sender).Stop();
-                    ((System.Timers.Timer)sender).Dispose();
+                    System.Timers.Timer? senderTimer = sender as System.Timers.Timer;
+                    senderTimer?.Stop();
+                    senderTimer?.Dispose();
                     Logger.Debug("Autoscan finished.", _logger);
                     return;
                 }

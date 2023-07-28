@@ -1,6 +1,7 @@
 ﻿using NorcusSheetsManager;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -10,9 +11,12 @@ namespace AutoPdfToImage
 {
     internal class Program
     {
+        public const string VERSION = "1.1";
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         static void Main(string[] args)
         {
+            Console.WriteLine("Norcus Client Manager " + VERSION);
+            Console.WriteLine("-------------------------");
             Manager manager = new Manager();
             manager.FullScan();
             manager.StartWatching(true);
