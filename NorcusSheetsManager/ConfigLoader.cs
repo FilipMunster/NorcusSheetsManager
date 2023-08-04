@@ -31,12 +31,16 @@ namespace NorcusSheetsManager
 
             System.Xml.Serialization.XmlSerializer serializer = new System.Xml.Serialization.XmlSerializer(typeof(Config));
             System.IO.FileStream file = System.IO.File.OpenRead(configFilePath);
-            IConfig deserialized = null;
-            try { deserialized = (IConfig)serializer.Deserialize(file); }
+            Config? deserialized = null;
+            try { deserialized = serializer.Deserialize(file) as Config; }
             catch (Exception e) { _logger.Warn(e, "Deserialization failed"); }
-            file.Close();
+            finally { file.Close(); }
 
-            if (deserialized != null) _SaveRegistry(deserialized.RunOnStartup);
+            if (deserialized != null) 
+            {
+                _SaveRegistry(deserialized.RunOnStartup);
+                _Save(deserialized); // tímto zajistím uložení aktuální verze Configu v případě, že načtený Config byl starší verze.
+            }
 
             return deserialized ?? _GetDefaultConfig();
         }
@@ -65,39 +69,38 @@ namespace NorcusSheetsManager
                 key?.DeleteValue("AutoPdfToImage", false);
         }
 
-        private static Config _GetDefaultConfig() =>
-            new Config()
-            {
-                SheetsPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location),
-                RunOnStartup = true,
-                OutFileFormat = MagickFormat.Png,
-                MultiPageDelimiter = "-",
-                MultiPageCounterLength = 3,
-                MultiPageInitNumber = 1,
-                DPI = 200,
-                TransparentBackground = false,
-                CropImage = true,
-                MovePdfToSubfolder = true,
-                PdfSubfolder = "PDF",
-                FixGDriveNaming = true,
-                WatchedExtensions = new[] { ".pdf", ".jpg", ".png", ".txt" }
-            };
+        private static Config _GetDefaultConfig() => new Config();
 
         public class Config : IConfig
         {
-            public string? SheetsPath { get; set; }
-            public bool RunOnStartup { get; set; }
-            public MagickFormat OutFileFormat { get; set; }
-            public string MultiPageDelimiter { get; set; } = "";
-            public int MultiPageCounterLength { get; set; }
-            public int MultiPageInitNumber { get; set; }
-            public int DPI { get; set; }
-            public bool TransparentBackground { get; set; }
-            public bool CropImage { get; set; }
-            public bool MovePdfToSubfolder { get; set; }
-            public string PdfSubfolder { get; set; }
-            public bool FixGDriveNaming { get; set; }
-            public string[] WatchedExtensions { get; set; }
+            public string? SheetsPath { get; set; } = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            public bool RunOnStartup { get; set; } = true;
+            public MagickFormat OutFileFormat { get; set; } = MagickFormat.Png;
+            public string MultiPageDelimiter { get; set; } = "-";
+            public int MultiPageCounterLength { get; set; } = 3;
+            public int MultiPageInitNumber { get; set; } = 1;
+            public int DPI { get; set; } = 200;
+            public bool TransparentBackground { get; set; } = false;
+            public bool CropImage { get; set; } = true;
+            public bool MovePdfToSubfolder { get; set; } = true;
+            public string PdfSubfolder { get; set; } = "Archiv PDF";
+            public bool FixGDriveNaming { get; set; } = true;
+            public string[] WatchedExtensions { get; set; } = new[] { ".pdf", ".jpg", ".png", ".txt" };
+            public APIServerSettings APISettings { get; set; } = new APIServerSettings();
+            public DatabaseConnection DbConnection { get; set; } = new DatabaseConnection();
+            public class APIServerSettings : IAPISettings
+            {
+                public bool RunServer { get; set; } = true;
+                public int Port { get; set; } = 4434;
+                public string Key { get; set; } = "";
+            }
+            public class DatabaseConnection : IDbConnection
+            {
+                public string Server { get; set; } = "server";
+                public string Database { get; set; } = "database";
+                public string UserId { get; set; } = "user";
+                public string Password { get; set; } = "password";
+            }
         }
     }
 }

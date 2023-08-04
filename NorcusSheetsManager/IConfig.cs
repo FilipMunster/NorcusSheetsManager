@@ -22,5 +22,20 @@ namespace NorcusSheetsManager
         string PdfSubfolder { get; set; }
         bool FixGDriveNaming { get; set; }
         string[] WatchedExtensions { get; set; }
+        ConfigLoader.Config.APIServerSettings APISettings { get; set; }
+        ConfigLoader.Config.DatabaseConnection DbConnection { get; set; }
+    }
+    public interface IDbConnection
+    {
+        public string Server { get; set; }
+        public string Database { get; set; }
+        public string UserId { get; set; }
+        public string Password { get; set; }
+    }
+    public interface IAPISettings
+    {
+        public bool RunServer { get; set; }
+        public int Port { get; set; }
+        public string Key { get; set; }
     }
 }

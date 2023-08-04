@@ -13,10 +13,12 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Collections.ObjectModel;
 using System.Timers;
+using NorcusSheetsManager.NameCorrector;
+using NorcusSheetsManager.API;
 
 namespace NorcusSheetsManager
 {
-    public class Manager
+    internal class Manager
     {
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         private Converter _Converter { get; set; }
@@ -24,6 +26,7 @@ namespace NorcusSheetsManager
         private bool _IsWatcherEnabled { get; set; }
         private bool _ScanningInProgress { get; set; }
         public IConfig Config { get; private set; }
+        public Corrector NameCorrector { get; private set; }
         public Manager()
         {
             Config = ConfigLoader.Load();
@@ -44,14 +47,22 @@ namespace NorcusSheetsManager
                 TransparentBackground = Config.TransparentBackground,
                 CropImage = Config.CropImage
             };
-            _CreateFileSystemWatchers();
+            _FileSystemWatchers = _CreateFileSystemWatchers();
+            NameCorrector = new Corrector(new TestFileLoader(), Config.SheetsPath, Config.WatchedExtensions);
+            
+            if (Config.APISettings.RunServer)
+            {            
+                Server.Initialize(Config.APISettings.Port, Config.APISettings.Key, NameCorrector);
+                Server.Start();
+                Logger.Debug("API server started.", _logger);
+            }
         }
         /// <summary>
         /// Vytvoří FileSystemWatchers pro každou složku s notami. Kontroluje pouze první úroveň každé složky.
         /// </summary>
-        private void _CreateFileSystemWatchers()
+        private List<FileSystemWatcher> _CreateFileSystemWatchers()
         {
-            _FileSystemWatchers = new List<FileSystemWatcher>();
+            List<FileSystemWatcher> _fileSystemWatchers = new ();
             var directories = Directory.GetDirectories(Config.SheetsPath);
             foreach (var dir in directories)
             {
@@ -74,8 +85,9 @@ namespace NorcusSheetsManager
                 watcher.Renamed += Watcher_Renamed;
                 watcher.Deleted += Watcher_Deleted;
 
-                _FileSystemWatchers.Add(watcher);
+                _fileSystemWatchers.Add(watcher);
             }
+            return _fileSystemWatchers;
         }
 
         public void StartWatching(bool verbose = false)
@@ -130,8 +142,9 @@ namespace NorcusSheetsManager
                 bool converted = _DeleteOlderAndConvert(pdfFile);
                 if (converted) convertCounter++;
             }
+            if (convertCounter > 0)
+                Logger.Debug($"{convertCounter} files converted to {Config.OutFileFormat}.", _logger);
 
-            Logger.Debug($"{convertCounter} file(s) converted to {Config.OutFileFormat}.", _logger);
             _ScanningInProgress = false;
             StartWatching();
         }
