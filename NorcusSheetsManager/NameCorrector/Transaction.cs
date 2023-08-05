@@ -8,11 +8,13 @@ namespace NorcusSheetsManager.NameCorrector
 {
     internal class Transaction : IRenamingTransaction
     {
+        public const int MaxSuggestionsCount = 10;
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         public Guid Guid { get; }
         public string InvalidFullPath { get; }
         public string InvalidName { get; set; }
-        public IEnumerable<IRenamingSuggestion> Suggestions => _SuggestionsList ?? Enumerable.Empty<IRenamingSuggestion>();
+        public IEnumerable<IRenamingSuggestion> Suggestions => 
+            _SuggestionsList?.Take(SuggestionsCount) ?? Enumerable.Empty<IRenamingSuggestion>();
         private List<IRenamingSuggestion>? _SuggestionsList { get; set; }
         private bool _IsCommited
         {
@@ -24,14 +26,16 @@ namespace NorcusSheetsManager.NameCorrector
             }
         }
         private bool __isCommited;
+        public int SuggestionsCount { get; set; }
 
         public Transaction(string baseFolder, string invalidFullName, IEnumerable<IRenamingSuggestion> suggestions)
         {
             Guid = Guid.NewGuid();
             InvalidFullPath = invalidFullName;
             InvalidName = Path.GetRelativePath(baseFolder, invalidFullName);
-            _SuggestionsList = new List<IRenamingSuggestion>(suggestions);
+            _SuggestionsList = new List<IRenamingSuggestion>(suggestions.Take(MaxSuggestionsCount));
         }
+
         public ITransactionResponse Commit(int suggestionIndex)
         {
             if (_IsCommited || _SuggestionsList is null)

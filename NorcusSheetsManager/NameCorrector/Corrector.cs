@@ -66,11 +66,13 @@ namespace NorcusSheetsManager.NameCorrector
                     continue;
 
                 Transaction? transaction = _RenamingTransactions.FirstOrDefault(t => t.InvalidFullPath == file);
+
                 if (transaction is null)
                 {
-                    transaction = new Transaction(_BaseSheetsFolder, file, _GetSuggestionsForFile(file, suggestionsCount));
+                    transaction = new Transaction(_BaseSheetsFolder, file, _GetSuggestionsForFile(file, Transaction.MaxSuggestionsCount));
                     _RenamingTransactions.Add(transaction);
                 }
+                transaction.SuggestionsCount = suggestionsCount;
                 transactions.Add(transaction);
             }
             return transactions;
@@ -78,14 +80,24 @@ namespace NorcusSheetsManager.NameCorrector
         public ITransactionResponse CommitTransactionByGuid(Guid transactionGuid, int suggestionIndex)
         {
             Transaction? transaction = _RenamingTransactions.FirstOrDefault(t => t.Guid == transactionGuid);
-            return transaction?.Commit(suggestionIndex) 
+            var response = transaction?.Commit(suggestionIndex) 
                 ?? new TransactionResponse(false, $"Transaction {transactionGuid} does not exist");
+            
+            if (transaction is not null) 
+                _RenamingTransactions.Remove(transaction);
+
+            return response;
         }
         public ITransactionResponse CommitTransactionByGuid(Guid transactionGuid, string newFileName)
         {
             Transaction? transaction = _RenamingTransactions.FirstOrDefault(t => t.Guid == transactionGuid);
-            return transaction?.Commit(newFileName)
+            var response = transaction?.Commit(newFileName)
                 ?? new TransactionResponse(false, $"Transaction {transactionGuid} does not exist");
+
+            if (transaction is not null) 
+                _RenamingTransactions.Remove(transaction);
+
+            return response;
         }
         public IRenamingTransaction? GetTransactionByGuid(Guid transactionGuid) 
             => _RenamingTransactions.FirstOrDefault(t => t.Guid == transactionGuid);
