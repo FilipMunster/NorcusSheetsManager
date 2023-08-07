@@ -14,6 +14,6 @@ namespace NorcusSheetsManager.NameCorrector
         public string Password { get; set; }
         public string ConnectionString { get; }
         public IEnumerable<string> GetSongNames();
-        public void ReloadData();
+        public Task ReloadDataAsync();
     }
 }

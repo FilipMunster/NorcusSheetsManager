@@ -48,7 +48,11 @@ namespace NorcusSheetsManager
                 CropImage = Config.CropImage
             };
             _FileSystemWatchers = _CreateFileSystemWatchers();
-            NameCorrector = new Corrector(new TestFileLoader(), Config.SheetsPath, Config.WatchedExtensions);
+            var sqlLoader = new MySQLLoader(Config.DbConnection.Server, 
+                Config.DbConnection.Database, 
+                Config.DbConnection.UserId, 
+                Config.DbConnection.Password);
+            NameCorrector = new Corrector(sqlLoader, Config.SheetsPath, Config.WatchedExtensions);
             
             if (Config.APISettings.RunServer)
             {            

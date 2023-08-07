@@ -17,57 +17,56 @@ namespace AutoPdfToImage
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
         static void Main(string[] args)
         {
-            //Corrector corrector = new Corrector(new TestFileLoader(), "d:\\Norcus-test\\Norcus noty\\", new[] { ".jpg", ".png", ".pdf"});
-            //var transactions = corrector.GetRenamingTransactionsForAllSubfolders(3);
-            //int i = 0;
-            //foreach (var tran in transactions)
-            //{
-            //    corrector.CommitTransactionByGuid(tran.Guid, Path.GetFileName(tran.InvalidFullName) + i++);
-            //}
-            //return;
-
-            Console.WriteLine("Norcus Client Manager " + VERSION);
-            Console.WriteLine("-------------------------");
-            Manager manager = new Manager();
-            manager.FullScan();
-            manager.StartWatching(true);
-            manager.AutoFullScan(60000, 5);
-
-            string commandMessage = "Commands:\n" +
-                "\tS - scan all PDF files (checks whether all PDFs have any image)\n" +
-                "\tD - deep scan (checks image files count vs PDF page count)\n" +
-                "\tF - force convert (converts all PDF files)\n" +
-                "\tN - correct invalid file names\n" +
-                "\tX - stop program";
-            Console.WriteLine(commandMessage);
-
-            bool @continue = true;
-            while (@continue)
+            try
             {
-                switch (Console.ReadKey(true).Key.ToString())
-                {
-                    case "X":
-                        @continue = false;
-                        break;
-                    case "S":
-                        manager.FullScan();
-                        break;
-                    case "D":
-                        manager.DeepScan();
-                        break;
-                    case "F":
-                        Console.WriteLine("Are you sure? (y/n)");
-                        if (Console.ReadKey(true).Key.ToString() == "Y")
-                            manager.ForceConvertAll();
-                        break;
-                    case "N":
-                        CorrectNames(manager);
-                        break;
-                    default:
-                        break;
-                }
+                Console.WriteLine("Norcus Client Manager " + VERSION);
+                Console.WriteLine("-------------------------");
+                Manager manager = new Manager();
+                manager.FullScan();
+                manager.StartWatching(true);
+                manager.AutoFullScan(60000, 5);
+
+                string commandMessage = "Commands:\n" +
+                    "\tS - scan all PDF files (checks whether all PDFs have any image)\n" +
+                    "\tD - deep scan (checks image files count vs PDF page count)\n" +
+                    "\tF - force convert (converts all PDF files)\n" +
+                    "\tN - correct invalid file names\n" +
+                    "\tX - stop program";
                 Console.WriteLine(commandMessage);
-            };
+
+                bool @continue = true;
+                while (@continue)
+                {
+                    switch (Console.ReadKey(true).Key.ToString())
+                    {
+                        case "X":
+                            @continue = false;
+                            break;
+                        case "S":
+                            manager.FullScan();
+                            break;
+                        case "D":
+                            manager.DeepScan();
+                            break;
+                        case "F":
+                            Console.WriteLine("Are you sure? (y/n)");
+                            if (Console.ReadKey(true).Key.ToString() == "Y")
+                                manager.ForceConvertAll();
+                            break;
+                        case "N":
+                            CorrectNames(manager);
+                            break;
+                        default:
+                            break;
+                    }
+                    Console.WriteLine(commandMessage);
+                };
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, _logger);
+                Console.ReadLine();
+            }
         }
         private static string _GetVersion()
         {

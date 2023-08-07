@@ -22,7 +22,7 @@ namespace NorcusSheetsManager.NameCorrector
 
         public IEnumerable<string> GetSongNames() => _songs;
 
-        public void ReloadData()
+        public async Task ReloadDataAsync()
         {
             _songs = File.ReadAllLines("db.txt");
         }

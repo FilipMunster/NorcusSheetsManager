@@ -12,33 +12,54 @@ namespace NorcusSheetsManager.NameCorrector
     internal class Corrector
     {
         private static readonly NLog.Logger _logger = NLog.LogManager.GetCurrentClassLogger();
-        private List<string> _Songs { get; }
+        private List<string> _Songs { get; set; }
         private List<Transaction> _RenamingTransactions { get; set; }
         private IEnumerable<string> _ExtensionFilter { get; set; }
-        private string _BaseSheetsFolder { get; }
+        public string BaseSheetsFolder { get; }
         private IDbLoader _dbLoader;
         private IStringDistance _stringSimilarityModel;
 
         public Corrector(IDbLoader dbLoader, string baseSheetsFolder, IEnumerable<string> extensionsFilter)
         {
             _dbLoader = dbLoader;
-            _BaseSheetsFolder = baseSheetsFolder;
+            BaseSheetsFolder = baseSheetsFolder;
             _Songs = new List<string>(dbLoader.GetSongNames());
+            
+            if (_Songs.Count == 0)
+                Logger.Warn("No song was loaded from the database.", _logger);
+            else
+            {
+                Logger.Debug($"Connected to the database.", _logger);
+            }
+            
             _stringSimilarityModel = new QGram(2);
             _RenamingTransactions = new List<Transaction>();
             _ExtensionFilter = extensionsFilter;
         }
-        public void ReloadData()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>true if more than 0 songs were loaded from database</returns>
+        public bool ReloadData()
         {
-            _Songs.Clear();
-            _dbLoader.ReloadData();
-            _Songs.AddRange(_dbLoader.GetSongNames());
+            _dbLoader.ReloadDataAsync().Wait();
+            _Songs = _dbLoader.GetSongNames().ToList();
+
+            if (_Songs.Count == 0)
+            {
+                Logger.Warn("No song was loaded from database.", _logger);
+                return false;
+            }
+            return true;
         }
-        public IEnumerable<IRenamingTransaction> GetRenamingTransactionsForAllSubfolders(int suggestionsCount)
+        public IEnumerable<IRenamingTransaction>? GetRenamingTransactionsForAllSubfolders(int suggestionsCount)
         {
+            if (!Directory.Exists(BaseSheetsFolder))
+                return null;
+
             List<IRenamingTransaction> result = new();
-            var directories = Directory.GetDirectories(_BaseSheetsFolder)
-                .Select(d => d.Replace(_BaseSheetsFolder, "").Replace("\\", ""));
+            var directories = Directory.GetDirectories(BaseSheetsFolder)
+                .Select(d => d.Replace(BaseSheetsFolder, "").Replace("\\", ""));
             foreach (var directory in directories)
             {
                 result.AddRange(GetRenamingTransactions(directory, suggestionsCount) ?? Enumerable.Empty<IRenamingTransaction>());
@@ -54,7 +75,7 @@ namespace NorcusSheetsManager.NameCorrector
         public IEnumerable<IRenamingTransaction>? GetRenamingTransactions(string sheetsSubfolder, int suggestionsCount)
         {
             List<IRenamingTransaction> transactions = new();
-            string path = Path.Combine(_BaseSheetsFolder, sheetsSubfolder);
+            string path = Path.Combine(BaseSheetsFolder, sheetsSubfolder);
             if (!Directory.Exists(path))
                 return null;
 
@@ -69,7 +90,7 @@ namespace NorcusSheetsManager.NameCorrector
 
                 if (transaction is null)
                 {
-                    transaction = new Transaction(_BaseSheetsFolder, file, _GetSuggestionsForFile(file, Transaction.MaxSuggestionsCount));
+                    transaction = new Transaction(BaseSheetsFolder, file, _GetSuggestionsForFile(file, Transaction.MaxSuggestionsCount));
                     _RenamingTransactions.Add(transaction);
                 }
                 transaction.SuggestionsCount = suggestionsCount;

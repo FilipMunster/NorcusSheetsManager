@@ -17,13 +17,11 @@ namespace NorcusSheetsManager.API.Resources
     [RestResource(BasePath = "api/v1")]
     internal class NameCorrectorResource
     {
-        private readonly ILogger _logger;
         private readonly ITokenAuthenticator _authenticator;
         private readonly Corrector _corrector;
         public NameCorrectorResource(ITokenAuthenticator authenticator, Corrector corrector)
         {
             _authenticator = authenticator;
-            //_logger = logger;
             _corrector = corrector;
         }
 
@@ -48,7 +46,13 @@ namespace NorcusSheetsManager.API.Resources
                 suggestionsCount = suggestionsCountInt;
             }
 
-            _corrector.ReloadData();
+            if (!_corrector.ReloadData())
+            {
+                context.Response.StatusCode = HttpStatusCode.InternalServerError;
+                await context.Response.SendResponseAsync($"No songs were loaded from the database.");
+                return;
+            }
+
             IEnumerable<IRenamingTransaction>? transactions;
             if (String.IsNullOrEmpty(folder))
                 transactions = _corrector.GetRenamingTransactionsForAllSubfolders(suggestionsCount);
@@ -58,7 +62,7 @@ namespace NorcusSheetsManager.API.Resources
             if (transactions is null)
             {
                 context.Response.StatusCode = HttpStatusCode.BadRequest;
-                await context.Response.SendResponseAsync($"Bad request: Folder \"{folder}\" does not exist.");
+                await context.Response.SendResponseAsync($"Bad request: Folder \"{folder ?? _corrector.BaseSheetsFolder}\" does not exist.");
                 return;
             }
 
