@@ -163,8 +163,8 @@ namespace NorcusSheetsManager
             if (CropImage)
             {
                 image.Trim();
-                int newWidth = System.Convert.ToInt32(image.Width * 1.02);
-                int newHeight = System.Convert.ToInt32(image.Height * 1.02);
+                int newWidth = System.Convert.ToInt32(image.Width * 1.01);
+                int newHeight = System.Convert.ToInt32(image.Height * 1.01);
                 image.Extent(newWidth, newHeight, Gravity.Center);
             }
         }

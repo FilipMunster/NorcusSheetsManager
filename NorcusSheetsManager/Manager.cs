@@ -47,7 +47,9 @@ namespace NorcusSheetsManager
                 TransparentBackground = Config.TransparentBackground,
                 CropImage = Config.CropImage
             };
+
             _FileSystemWatchers = _CreateFileSystemWatchers();
+            
             var sqlLoader = new MySQLLoader(Config.DbConnection.Server, 
                 Config.DbConnection.Database, 
                 Config.DbConnection.UserId, 

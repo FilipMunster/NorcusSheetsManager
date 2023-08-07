@@ -35,6 +35,12 @@ namespace NorcusSheetsManager.NameCorrector
         public async Task ReloadDataAsync()
         {
             List<string> songs = new List<string>();
+            if (string.IsNullOrEmpty(Server) || string.IsNullOrEmpty(Database))
+            {
+                _Songs = new List<string>();
+                return;
+            }
+
             try
             {
                 using var connection = new MySqlConnection(ConnectionString);

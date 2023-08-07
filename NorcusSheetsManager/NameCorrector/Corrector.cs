@@ -26,7 +26,7 @@ namespace NorcusSheetsManager.NameCorrector
             _Songs = new List<string>(dbLoader.GetSongNames());
             
             if (_Songs.Count == 0)
-                Logger.Warn("No song was loaded from the database.", _logger);
+                Logger.Warn("No songs were loaded from the database.", _logger);
             else
             {
                 Logger.Debug($"Connected to the database.", _logger);
@@ -47,7 +47,7 @@ namespace NorcusSheetsManager.NameCorrector
 
             if (_Songs.Count == 0)
             {
-                Logger.Warn("No song was loaded from database.", _logger);
+                Logger.Warn("No songs were loaded from database.", _logger);
                 return false;
             }
             return true;
