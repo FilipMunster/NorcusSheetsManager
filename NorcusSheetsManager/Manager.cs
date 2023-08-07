@@ -136,7 +136,7 @@ namespace NorcusSheetsManager
             _ScanningInProgress = true;
             Logger.Debug($"Scanning all PDF files in {Config.SheetsPath}.", _logger);
             if (Config.FixGDriveNaming) _FixAllGoogleFiles();
-            var pdfFiles = _GetPdfFiles();
+            var pdfFiles = _GetPdfFiles(false);
 
             Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
 
@@ -161,9 +161,13 @@ namespace NorcusSheetsManager
             _ScanningInProgress = true;
             Logger.Debug($"Deep scanning all PDF files in {Config.SheetsPath}.", _logger);
             if (Config.FixGDriveNaming) _FixAllGoogleFiles();
-            var pdfFiles = _GetPdfFiles();
+            var pdfFiles = _GetPdfFiles(false);
+            var archivePdfFiles = _GetPdfFiles(true);
 
-            Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
+            if (!Config.MovePdfToSubfolder)
+                Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
+            else
+                Logger.Debug($"Found {pdfFiles.Count() + archivePdfFiles.Count()} PDF files in {Config.SheetsPath} and PDF subfolders.", _logger);
 
             int convertCounter = 0;
             foreach (FileInfo pdfFile in pdfFiles)
@@ -183,6 +187,29 @@ namespace NorcusSheetsManager
                 if (converted) convertCounter++;
             }
 
+            if (Config.MovePdfToSubfolder)
+            {
+                foreach (FileInfo pdfFile in archivePdfFiles)
+                {
+                    if (!_Converter.TryGetPdfPageCount(pdfFile, out int pageCount))
+                    {
+                        Logger.Warn($"Unable to get page count of file {pdfFile.FullName}.", _logger);
+                        continue;
+                    };
+
+                    FileInfo pdfFileParentDir = new FileInfo(
+                        Path.Combine(Directory.GetParent(pdfFile.Directory.FullName).FullName, pdfFile.Name));
+                    int fileCount = _GetImagesForPdf(pdfFileParentDir).Length;
+                    if (pageCount == fileCount)
+                        continue;
+
+                    Logger.Debug($"File {pdfFile.FullName} has {pageCount} page(s), but {fileCount} file(s).", _logger);
+                    File.Move(pdfFile.FullName, pdfFileParentDir.FullName);
+                    bool converted = _DeleteOlderAndConvert(pdfFileParentDir, true);
+                    if (converted) convertCounter++;
+                }
+            }
+
             Logger.Debug($"{convertCounter} file(s) converted to {Config.OutFileFormat}.", _logger);
             _ScanningInProgress = false;
             StartWatching();
@@ -196,9 +223,24 @@ namespace NorcusSheetsManager
             _ScanningInProgress = true;
             Logger.Debug($"Force converting all PDF files in {Config.SheetsPath}.", _logger);
             if (Config.FixGDriveNaming) _FixAllGoogleFiles();
-            var pdfFiles = _GetPdfFiles();
+            var pdfFiles = _GetPdfFiles(false);
+            var archivePdfFiles = _GetPdfFiles(true);
 
-            Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
+            if (!Config.MovePdfToSubfolder)
+                Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
+            else
+            {
+                Logger.Debug($"Found {pdfFiles.Count() + archivePdfFiles.Count()} PDF files in {Config.SheetsPath} and PDF subfolders.", _logger);
+                // Pokud je povoleno přesouvání PDFka do podsložky, přesunu PDFka z podsložek do složky o úroveň výš.
+                foreach (var archivePdf in archivePdfFiles)
+                {
+                    var pdfInParentDir = new FileInfo(Path.Combine(Directory.GetParent(archivePdf.DirectoryName).FullName, archivePdf.Name));
+                    if (!pdfInParentDir.Exists)
+                        File.Move(archivePdf.FullName, pdfInParentDir.FullName);
+                }
+                // Aktualizuji seznam PDF v Config.SheetsPath:
+                pdfFiles = _GetPdfFiles(false);
+            }
 
             int convertCounter = 0;
             foreach (FileInfo pdfFile in pdfFiles)
@@ -390,14 +432,16 @@ namespace NorcusSheetsManager
                 Logger.Warn(e, _logger);
             }
         }
-        private IEnumerable<FileInfo> _GetPdfFiles()
+        private IEnumerable<FileInfo> _GetPdfFiles(bool filesInPdfSubfolder)
         {
             var directories = Directory.GetDirectories(Config.SheetsPath);
             List<FileInfo> pdfFiles = new List<FileInfo>();
 
             foreach (var dir in directories)
             {
-                pdfFiles.AddRange(Directory.GetFiles(dir, "*.pdf", SearchOption.TopDirectoryOnly)
+                string dirx = filesInPdfSubfolder ? Path.Combine(dir, Config.PdfSubfolder) : dir;
+                if (!Directory.Exists(dirx)) continue;
+                pdfFiles.AddRange(Directory.GetFiles(dirx, "*.pdf", SearchOption.TopDirectoryOnly)
                     .Select(f => new FileInfo(f)));
             }
             return pdfFiles;

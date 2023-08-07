@@ -11,6 +11,7 @@ namespace NorcusSheetsManager
     {
         string SheetsPath { get; set; }
         bool RunOnStartup { get; set; }
+        bool AutoScan { get; set; }
         MagickFormat OutFileFormat { get; set; }
         string MultiPageDelimiter { get; set; }
         int MultiPageCounterLength { get; set;}
