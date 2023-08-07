@@ -49,7 +49,7 @@ namespace AutoPdfToImage
                             manager.DeepScan();
                             break;
                         case "F":
-                            Console.WriteLine("Are you sure? (y/n)");
+                            Console.WriteLine("Are you sure? (Y/N)");
                             if (Console.ReadKey(true).Key.ToString() == "Y")
                                 manager.ForceConvertAll();
                             break;

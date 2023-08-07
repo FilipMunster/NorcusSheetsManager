@@ -169,7 +169,8 @@ namespace NorcusSheetsManager
             if (!Config.MovePdfToSubfolder)
                 Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
             else
-                Logger.Debug($"Found {pdfFiles.Count() + archivePdfFiles.Count()} PDF files in {Config.SheetsPath} and PDF subfolders.", _logger);
+                Logger.Debug($"Found {pdfFiles.Count() + archivePdfFiles.Count()} PDF files in {Config.SheetsPath} " +
+                    $"and \"{Config.PdfSubfolder}\" subfolders.", _logger);
 
             int convertCounter = 0;
             foreach (FileInfo pdfFile in pdfFiles)
@@ -232,7 +233,8 @@ namespace NorcusSheetsManager
                 Logger.Debug($"Found {pdfFiles.Count()} PDF files in {Config.SheetsPath}.", _logger);
             else
             {
-                Logger.Debug($"Found {pdfFiles.Count() + archivePdfFiles.Count()} PDF files in {Config.SheetsPath} and PDF subfolders.", _logger);
+                Logger.Debug($"Found {pdfFiles.Count() + archivePdfFiles.Count()} PDF files " +
+                    $"in {Config.SheetsPath} and \"{Config.PdfSubfolder}\" subfolders.", _logger);
                 // Pokud je povoleno přesouvání PDFka do podsložky, přesunu PDFka z podsložek do složky o úroveň výš.
                 foreach (var archivePdf in archivePdfFiles)
                 {
@@ -417,20 +419,17 @@ namespace NorcusSheetsManager
             string sourceFile = pdfFile.FullName;
             string newPath = Path.Combine(Path.GetDirectoryName(pdfFile.FullName), Config.PdfSubfolder);
             if (!Directory.Exists(newPath))
-            {
                 Directory.CreateDirectory(newPath);
-
-            }
 
             string targetFile = Path.Combine(newPath, pdfFile.Name);
             try
             {
                 File.Move(sourceFile, targetFile, true);
-                Logger.Debug($"File {sourceFile} was moved to {Config.PdfSubfolder} subfolder.", _logger);
+                Logger.Debug($"File {sourceFile} was moved to \"{Config.PdfSubfolder}\" subfolder.", _logger);
             }
             catch (Exception e)
             {
-                Logger.Warn($"File {sourceFile} could not be moved to {Config.PdfSubfolder} subfolder.", _logger);
+                Logger.Warn($"File {sourceFile} could not be moved to \"{Config.PdfSubfolder}\" subfolder.", _logger);
                 Logger.Warn(e, _logger);
             }
         }

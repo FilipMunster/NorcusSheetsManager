@@ -86,19 +86,31 @@ namespace NorcusSheetsManager
             
             using (var images = new MagickImageCollection())
             {
-                FileStream fileStream;
+                byte[]? fileBytes = null;
                 try
                 {
-                    fileStream = pdfFile.Open(FileMode.Open);
+                    fileBytes = File.ReadAllBytes(pdfFile.FullName);
                 }
                 catch (IOException e)
                 {
                     Logger.Warn(e, _logger);
                     Logger.Warn("I will sleep for 100ms and try again...", _logger);
                     Thread.Sleep(100);
-                    fileStream = pdfFile.Open(FileMode.Open);
+                    try
+                    {
+                        fileBytes = File.ReadAllBytes(pdfFile.FullName);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"File {pdfFile.FullName} could not be opened.", _logger);
+                        Logger.Error(ex, _logger);
+                    }
                 }
-                images.Read(fileStream, _magickReadSettings);
+
+                if (fileBytes is null)
+                    return Enumerable.Empty<FileInfo>();
+
+                images.Read(fileBytes, _magickReadSettings);
 
                 if (images.Count == 1)
                 {
@@ -120,7 +132,6 @@ namespace NorcusSheetsManager
                     }
                 }
                 else return Enumerable.Empty<FileInfo>();
-                fileStream.Close();
             }
             Logger.Debug($"{pdfFile.FullName} was converted into {result.Count} {OutFileFormat} image"
                 + (result.Count > 1 ? "s." : "."), _logger);
