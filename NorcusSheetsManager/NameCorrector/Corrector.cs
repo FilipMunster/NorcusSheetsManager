@@ -16,12 +16,12 @@ namespace NorcusSheetsManager.NameCorrector
         private List<Transaction> _RenamingTransactions { get; set; }
         private IEnumerable<string> _ExtensionFilter { get; set; }
         public string BaseSheetsFolder { get; }
-        private IDbLoader _dbLoader;
+        public IDbLoader DbLoader { get; private set; }
         private IStringDistance _stringSimilarityModel;
 
         public Corrector(IDbLoader dbLoader, string baseSheetsFolder, IEnumerable<string> extensionsFilter)
         {
-            _dbLoader = dbLoader;
+            DbLoader = dbLoader;
             BaseSheetsFolder = baseSheetsFolder;
             _Songs = new List<string>(dbLoader.GetSongNames());
             
@@ -42,8 +42,8 @@ namespace NorcusSheetsManager.NameCorrector
         /// <returns>true if more than 0 songs were loaded from database</returns>
         public bool ReloadData()
         {
-            _dbLoader.ReloadDataAsync().Wait();
-            _Songs = _dbLoader.GetSongNames().ToList();
+            DbLoader.ReloadDataAsync().Wait();
+            _Songs = DbLoader.GetSongNames().ToList();
 
             if (_Songs.Count == 0)
             {

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NorcusSheetsManager.NameCorrector
 {
-    internal class TestFileLoader : IDbLoader
+    internal class DbFileLoader : IDbLoader
     {
         public string Server { get; set; }
         public string Database { get; set; }
@@ -15,16 +15,30 @@ namespace NorcusSheetsManager.NameCorrector
 
         public string ConnectionString => $"Server={Server}; Database={Database}; User Id={UserId}; Password={Password};";
         private string[] _songs;
-        public TestFileLoader()
+        private string _dbFile;
+        public DbFileLoader(string fileName)
         {
-            _songs = File.ReadAllLines("db.txt");
+            _songs = File.ReadAllLines(fileName);
+            _dbFile = fileName;
         }
 
         public IEnumerable<string> GetSongNames() => _songs;
 
         public async Task ReloadDataAsync()
         {
-            _songs = File.ReadAllLines("db.txt");
+            _songs = File.ReadAllLines(_dbFile);
+        }
+
+        public IEnumerable<INorcusUser> GetUsers()
+        {
+            Guid userGuid = Guid.Empty;
+            try
+            {
+                userGuid = new Guid(UserId);
+            }
+            catch { }
+            var user = new NorcusUser() { Guid = userGuid };
+            return new List<NorcusUser>() { user };
         }
     }
 }

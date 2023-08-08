@@ -33,6 +33,7 @@ namespace NorcusSheetsManager.API
             _server = serverBuilder.Build();
             _server.Prefixes.Clear();
             _server.Prefixes.Add($"https://+:{port}/");
+            //_server.Prefixes.Add($"http://localhost:{port}/");
         }
         internal static void Initialize(int port, string secureKey, Corrector corrector) 
         {

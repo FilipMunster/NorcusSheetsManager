@@ -26,11 +26,17 @@ namespace NorcusSheetsManager.API
         }
         public bool IsTokenValid(string token) => _ProcessToken(token).Valid;
 
+        public string GetClaimValue(IHttpContext context, string claimType)
+        {
+            string jwtToken = context.Request.Headers.GetValue<string>("Authorization").Split(' ', StringSplitOptions.RemoveEmptyEntries)[1];
+            return GetClaimValue(jwtToken, claimType);
+        }
         public string GetClaimValue(string token, string claimType)
         {
             ClaimsPrincipal? claims = _ProcessToken(token).Claims;
             return claims?.Claims.FirstOrDefault(c => c.Type.ToLower() == claimType.ToLower())?.Value ?? "";
         }
+
         public bool ValidateFromContext(IHttpContext context)
             => ValidateFromContext(context, Enumerable.Empty<Claim>());
         public bool ValidateFromContext(IHttpContext context, Claim requiredClaim)

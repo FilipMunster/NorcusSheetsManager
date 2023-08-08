@@ -17,12 +17,14 @@ namespace NorcusSheetsManager.API.Resources
     [RestResource(BasePath = "api/v1")]
     internal class NameCorrectorResource
     {
-        private readonly ITokenAuthenticator _authenticator;
-        private readonly Corrector _corrector;
+        private ITokenAuthenticator _Authenticator { get; set; }
+        private Corrector _Corrector { get; set; }
+        private Models.NameCorrectorModel _Model { get; set; }
         public NameCorrectorResource(ITokenAuthenticator authenticator, Corrector corrector)
         {
-            _authenticator = authenticator;
-            _corrector = corrector;
+            _Authenticator = authenticator;
+            _Corrector = corrector;
+            _Model = new Models.NameCorrectorModel(corrector.DbLoader);
         }
 
         [RestRoute("Get", "/invalid-names")]
@@ -31,13 +33,29 @@ namespace NorcusSheetsManager.API.Resources
         [RestRoute("Get", "/{folder}/invalid-names/{suggestionsCount:num}")]
         public async Task GetInvalidNames(IHttpContext context)
         {
-            if (!_authenticator.ValidateFromContext(context))
+            if (!_Authenticator.ValidateFromContext(context))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
                 return;
             }
 
+            if (!_Corrector.ReloadData())
+            {
+                context.Response.StatusCode = HttpStatusCode.InternalServerError;
+                await context.Response.SendResponseAsync($"No songs were loaded from the database.");
+                return;
+            }
+
             context.Request.PathParameters.TryGetValue("folder", out string? folder);
+
+            // Kontrola práv uživatele
+            bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "UserId"));
+            if (!_Model.CanUserRead(isAdmin, userId, folder))
+            {
+                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                return;
+            }
 
             int suggestionsCount = 1;
             if (context.Request.PathParameters.TryGetValue("suggestionsCount", out string? suggestionsCountString)
@@ -46,23 +64,16 @@ namespace NorcusSheetsManager.API.Resources
                 suggestionsCount = suggestionsCountInt;
             }
 
-            if (!_corrector.ReloadData())
-            {
-                context.Response.StatusCode = HttpStatusCode.InternalServerError;
-                await context.Response.SendResponseAsync($"No songs were loaded from the database.");
-                return;
-            }
-
             IEnumerable<IRenamingTransaction>? transactions;
             if (String.IsNullOrEmpty(folder))
-                transactions = _corrector.GetRenamingTransactionsForAllSubfolders(suggestionsCount);
+                transactions = _Corrector.GetRenamingTransactionsForAllSubfolders(suggestionsCount);
             else
-                transactions = _corrector.GetRenamingTransactions(folder, suggestionsCount);
+                transactions = _Corrector.GetRenamingTransactions(folder, suggestionsCount);
 
             if (transactions is null)
             {
                 context.Response.StatusCode = HttpStatusCode.BadRequest;
-                await context.Response.SendResponseAsync($"Bad request: Folder \"{folder ?? _corrector.BaseSheetsFolder}\" does not exist.");
+                await context.Response.SendResponseAsync($"Bad request: Folder \"{folder ?? _Corrector.BaseSheetsFolder}\" does not exist.");
                 return;
             }
 
@@ -72,7 +83,16 @@ namespace NorcusSheetsManager.API.Resources
         [RestRoute("Post", "fix-name")]
         public async Task FixName(IHttpContext context)
         {
-            if (!_authenticator.ValidateFromContext(context))
+            if (!_Authenticator.ValidateFromContext(context))
+            {
+                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                return;
+            }
+            
+            // Kontrola práv uživatele
+            bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "UserId"));
+            if (!_Model.CanUserCommit(isAdmin, userId))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
                 return;
@@ -105,8 +125,8 @@ namespace NorcusSheetsManager.API.Resources
                 return;
             }
 
-            var response = suggestionIndexOk ? _corrector.CommitTransactionByGuid(guid, suggestionIndex)
-                : _corrector.CommitTransactionByGuid(guid, fileName);
+            var response = suggestionIndexOk ? _Corrector.CommitTransactionByGuid(guid, suggestionIndex)
+                : _Corrector.CommitTransactionByGuid(guid, fileName);
 
             if (!response.Success)
             {
@@ -121,7 +141,7 @@ namespace NorcusSheetsManager.API.Resources
         [RestRoute("Get", "/file-exists/{transaction}/{fileName}")]
         public async Task CheckFileExists(IHttpContext context)
         {
-            if (!_authenticator.ValidateFromContext(context))
+            if (!_Authenticator.ValidateFromContext(context))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
                 return;
@@ -133,7 +153,7 @@ namespace NorcusSheetsManager.API.Resources
             if (!Guid.TryParse(guidString, out Guid guid))
                 errorMsg.AppendLine($"Parameter \"{guidString}\" is not valid Guid.");
 
-            var trans = _corrector.GetTransactionByGuid(guid);
+            var trans = _Corrector.GetTransactionByGuid(guid);
             if (trans is null)
                 errorMsg.AppendLine($"Transaction \"{guid}\" does not exist.");
 

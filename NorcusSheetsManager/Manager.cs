@@ -49,11 +49,19 @@ namespace NorcusSheetsManager
             };
 
             _FileSystemWatchers = _CreateFileSystemWatchers();
-            
-            var sqlLoader = new MySQLLoader(Config.DbConnection.Server, 
-                Config.DbConnection.Database, 
-                Config.DbConnection.UserId, 
-                Config.DbConnection.Password);
+
+            IDbLoader sqlLoader;
+            if (File.Exists(Config.DbConnection.Database))
+            {
+                sqlLoader = new DbFileLoader(Config.DbConnection.Database) { UserId = Config.DbConnection.UserId };
+            }
+            else
+            {
+                sqlLoader = new MySQLLoader(Config.DbConnection.Server, 
+                    Config.DbConnection.Database, 
+                    Config.DbConnection.UserId, 
+                    Config.DbConnection.Password);
+            }
             NameCorrector = new Corrector(sqlLoader, Config.SheetsPath, Config.WatchedExtensions);
             
             if (Config.APISettings.RunServer)

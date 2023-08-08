@@ -16,6 +16,7 @@ namespace NorcusSheetsManager.NameCorrector
         public string Password { get; set; }
         public string ConnectionString => $"Server={Server}; Database={Database}; User Id={UserId}; Password={Password};";
         private List<string> _Songs { get; set; } = new();
+        private List<NorcusUser> _Users { get; set; } = new();
         public MySQLLoader(string server, string database, string userId, string password)
         {
             Server = server;
@@ -31,13 +32,20 @@ namespace NorcusSheetsManager.NameCorrector
 
             return _Songs;
         }
+        public IEnumerable<INorcusUser> GetUsers()
+        {
+            if (_Users.Count == 0)
+                ReloadDataAsync().Wait();
+
+            return _Users;
+        }
 
         public async Task ReloadDataAsync()
         {
-            List<string> songs = new List<string>();
             if (string.IsNullOrEmpty(Server) || string.IsNullOrEmpty(Database))
             {
-                _Songs = new List<string>();
+                _Songs = new();
+                _Users = new();
                 return;
             }
 
@@ -45,23 +53,49 @@ namespace NorcusSheetsManager.NameCorrector
             {
                 using var connection = new MySqlConnection(ConnectionString);
                 await connection.OpenAsync();
-                using var command = new MySqlCommand("SELECT filename FROM songs", connection);
-                using var reader = await command.ExecuteReaderAsync();
-    
-                while (await reader.ReadAsync())
-                {
-                    songs.Add(reader.GetString(0));
-                }
+                _Songs = await _GetSongs(connection);
+                _Users = await _GetUsers(connection);
             }
             catch (Exception e)
             {
                 Logger.Error(e, _logger);
-                songs = new();
+                _Songs = new();
+                _Users = new();
             }
-            finally
+        }
+
+        private async Task<List<string>> _GetSongs(MySqlConnection connection)
+        {
+            List<string> songs = new();
+            using var command = new MySqlCommand("SELECT filename FROM songs", connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
             {
-                _Songs = songs;
+                songs.Add(reader.GetString(0));
             }
+            return songs;
+        }
+
+        private async Task<List<NorcusUser>> _GetUsers(MySqlConnection connection)
+        {
+            List<NorcusUser> users = new();
+            using var command = new MySqlCommand("SELECT uuid, name, email, folder, admin FROM musicians", connection);
+            using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                NorcusUser norcusUser = new NorcusUser()
+                {
+                    Guid = reader.GetGuid(0),
+                    Name = reader.GetString(1),
+                    Email = reader.GetString(2),
+                    Folder = reader.GetString(3),
+                    Admin = reader.GetBoolean(4),
+                };
+                users.Add(norcusUser);
+            }
+            return users;
         }
     }
 }
