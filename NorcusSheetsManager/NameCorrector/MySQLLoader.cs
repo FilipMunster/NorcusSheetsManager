@@ -80,7 +80,7 @@ namespace NorcusSheetsManager.NameCorrector
         private async Task<List<NorcusUser>> _GetUsers(MySqlConnection connection)
         {
             List<NorcusUser> users = new();
-            using var command = new MySqlCommand("SELECT uuid, name, email, folder, admin FROM musicians", connection);
+            using var command = new MySqlCommand("SELECT uuid, name, email, folder FROM musicians", connection);
             using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
@@ -91,7 +91,6 @@ namespace NorcusSheetsManager.NameCorrector
                     Name = reader.GetString(1),
                     Email = reader.GetString(2),
                     Folder = reader.GetString(3),
-                    Admin = reader.GetBoolean(4),
                 };
                 users.Add(norcusUser);
             }

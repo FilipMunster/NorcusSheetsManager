@@ -31,13 +31,14 @@ namespace NorcusSheetsManager.NameCorrector
 
         public IEnumerable<INorcusUser> GetUsers()
         {
+            var splitUser = UserId.Split(";");
             Guid userGuid = Guid.Empty;
             try
             {
-                userGuid = new Guid(UserId);
+                userGuid = new Guid(splitUser[0]);
             }
             catch { }
-            var user = new NorcusUser() { Guid = userGuid };
+            var user = new NorcusUser() { Guid = userGuid, Folder = splitUser[1] };
             return new List<NorcusUser>() { user };
         }
     }

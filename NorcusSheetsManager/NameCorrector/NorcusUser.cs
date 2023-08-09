@@ -12,7 +12,6 @@ namespace NorcusSheetsManager.NameCorrector
         string Folder { get; }
         string Email { get; }
         string Name { get; }
-        bool Admin { get; }
     }
     public class NorcusUser : INorcusUser
     {
@@ -20,6 +19,5 @@ namespace NorcusSheetsManager.NameCorrector
         public string Folder { get; set; } = "";
         public string Email { get; set; } = "";
         public string Name { get; set; } = "";
-        public bool Admin { get; set; } = false;
     }
 }

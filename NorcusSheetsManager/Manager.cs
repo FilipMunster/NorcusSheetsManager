@@ -51,7 +51,7 @@ namespace NorcusSheetsManager
             _FileSystemWatchers = _CreateFileSystemWatchers();
 
             IDbLoader sqlLoader;
-            if (File.Exists(Config.DbConnection.Database))
+            if (File.Exists(Config.DbConnection.Database) && Path.GetExtension(Config.DbConnection.Database) == ".txt")
             {
                 sqlLoader = new DbFileLoader(Config.DbConnection.Database) { UserId = Config.DbConnection.UserId };
             }
@@ -65,8 +65,13 @@ namespace NorcusSheetsManager
             NameCorrector = new Corrector(sqlLoader, Config.SheetsPath, Config.WatchedExtensions);
             
             if (Config.APISettings.RunServer)
-            {            
-                Server.Initialize(Config.APISettings.Port, Config.APISettings.Key, NameCorrector);
+            {
+                List<(Type type, object instance)> singletons = new()
+                {
+                    (typeof(Corrector), NameCorrector),
+                    (typeof(Manager), this)
+                };
+                Server.Initialize(Config.APISettings.Port, Config.APISettings.Key, singletons);
                 Server.Start();
                 Logger.Debug("API server started.", _logger);
             }

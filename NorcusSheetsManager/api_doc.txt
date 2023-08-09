@@ -1,0 +1,77 @@
+Norcus Sheets Manager API
+=========================
+JWT token:
+----------
+Claims:
+	- "NsmAdmin": "true"/"false"
+	- "UserId": guid = uuid uživatele v db Norcusu
+	
+Routes:
+-------
+GET: api/v1/corrector/invalid-names
+	-> IRenamingTransaction[]
+	- vrátí chybné názvy souborů ze všech složek not
+	- ke každé položce vrátí 1 návrh
+	- pokud NsmAdmin != "true", vrátí návrhy pouze ze složky uživatele dle UserId
+	
+GET: api/v1/corrector/invalid-names/{suggestionsCount:num}
+	-> IRenamingTransaction[]
+	- vrátí chybné názvy souborů ze všech složek not
+	- ke každé položce vrátí počet {suggestionsCount:num} návrhů (max. 10)
+	- pokud NsmAdmin != "true", vrátí návrhy pouze ze složky uživatele dle UserId
+	
+GET: api/v1/corrector/{folder}/invalid-names
+	-> IRenamingTransaction[]
+	- vrátí chybné názvy souborů ze složky {folder}
+	- ke každé položce vrátí 1 návrh
+	- pokud NsmAdmin != "true", a {folder} neodpovídá složce uživatele, vrátí Error 403
+	
+GET: api/v1/corrector/{folder}/invalid-names/{suggestionsCount:num}
+	-> IRenamingTransaction[]
+	- vrátí chybné názvy souborů ze složky {folder}
+	- ke každé položce vrátí počet {suggestionsCount:num} návrhů (max. 10)	
+	- pokud NsmAdmin != "true", a {folder} neodpovídá složce uživatele, vrátí Error 403
+
+GET: api/v1/corrector/file-exists/{transaction}/{fileName}
+	-> IRenamingSuggestion
+	- transaction = Guid transakce
+	- fileName = dotazovaný název souboru bez přípony
+	- kontroluje se pouze validita tokenu
+
+POST: api/v1/corrector/fix-name
+	- Content-Type: application/json
+	- Body: IPostFixName
+			- pokud je vyplněna hodnota FileName i SuggestionIndex, použije se SuggestionIndex.
+			  Jinak se použije ta hodnota, která není null.
+	- Požadavky: NsmAdmin == "true" nebo uživatel UserId musí existovat
+
+POST: api/v1/manager/scan
+	- spustí funkci Scan (kontrola, zda ke každému PDf existuje obrázek)
+	- Požadavky: NsmAdmin == "true"
+	
+POST: api/v1/manager/deep-scan
+	- spustí funkci Deep Scan (kontrola, zda ke každému PDF existuje správný počet obrázků dle počtu stránek PDF)
+	- Požadavky: NsmAdmin == "true"
+	
+POST: api/v1/manager/convert-all
+	- spustí funkci Convert All (znovu převede všechny PDF do obrázků - může trvat delší dobu)
+	- Požadavky: NsmAdmin == "true"
+
+Interfaces:
+-----------	
+IRenamingTransaction {
+	TransactionGuid : Guid
+	InvalidName : string 
+	Suggestions : IRenamingSuggestion[]
+}
+
+IRenamingSuggestion {
+	FileName : string (navrhovaný název nového souboru bez přípony)
+	FileExists : bool
+}
+
+IPostFixName {
+	TransactionGuid: Guid
+	FileName: string? (nový název souboru bez přípony)
+	SuggestionIndex: int? (index návrhu v transakci)
+}

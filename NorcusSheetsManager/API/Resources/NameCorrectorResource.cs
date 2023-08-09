@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace NorcusSheetsManager.API.Resources
 {
-    [RestResource(BasePath = "api/v1")]
+    [RestResource(BasePath = "api/v1/corrector")]
     internal class NameCorrectorResource
     {
         private ITokenAuthenticator _Authenticator { get; set; }
@@ -51,7 +51,7 @@ namespace NorcusSheetsManager.API.Resources
             // Kontrola práv uživatele
             bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
             Guid userId = new Guid(_Authenticator.GetClaimValue(context, "UserId"));
-            if (!_Model.CanUserRead(isAdmin, userId, folder))
+            if (!_Model.CanUserRead(isAdmin, userId, ref folder))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
                 return;
@@ -98,35 +98,28 @@ namespace NorcusSheetsManager.API.Resources
                 return;
             }
 
-            Dictionary<string, string> data = (context.Locals["FormData"] as Dictionary<string, string>) 
-                ?? new Dictionary<string, string>();
-            
-            Guid guid = Guid.Empty;
-            bool guidOk = data.TryGetValue("guid", out string? guidString);
-            guidOk = guidOk && Guid.TryParse(guidString, out guid);
-            
-            bool fileNameOk = data.TryGetValue("file-name", out string? fileName);
-
-            int suggestionIndex = 0;
-            bool suggestionIndexOk = data.TryGetValue("suggestion-index", out string? suggestionIndexString);
-            suggestionIndexOk = suggestionIndexOk && Int32.TryParse(suggestionIndexString, out suggestionIndex);
-
-            StringBuilder errorMsg = new StringBuilder();
-            if (!guidOk)
-                errorMsg.AppendLine("Parameter \"guid\" missing or invalid.");
-            if (!fileNameOk && !suggestionIndexOk)
-                errorMsg.AppendLine("Both \"file-name\" and \"suggestion-index\" parameters are invalid. One of them must be correct.");
-
-            if (errorMsg.Length > 0)
+            var request = JsonSerializer.Deserialize(context.Request.InputStream, typeof(RequestClasses.PostFixName)) as RequestClasses.PostFixName;
+            if (request is null)
             {
-                string msg = "Bad request: " + errorMsg.ToString();
+                await context.Response.SendResponseAsync(HttpStatusCode.BadRequest);
+                return;
+            }
+
+            if (String.IsNullOrEmpty(request.FileName) && !request.SuggestionIndex.HasValue)
+            {
+                string msg = "Bad request: " 
+                    + "Both \"FileName\" and \"SuggestionIndex\" values are null. One of them must be set.";
+                if (request.TransactionGuid == Guid.Empty)
+                    msg += " Parameter \"TransactionGuid\" is invalid";
+
                 context.Response.StatusCode = HttpStatusCode.BadRequest;
                 await context.Response.SendResponseAsync(msg);
                 return;
             }
 
-            var response = suggestionIndexOk ? _Corrector.CommitTransactionByGuid(guid, suggestionIndex)
-                : _Corrector.CommitTransactionByGuid(guid, fileName);
+            var response = request.SuggestionIndex.HasValue ? 
+                _Corrector.CommitTransactionByGuid(request.TransactionGuid, (int)request.SuggestionIndex)
+                : _Corrector.CommitTransactionByGuid(request.TransactionGuid, request.FileName);
 
             if (!response.Success)
             {

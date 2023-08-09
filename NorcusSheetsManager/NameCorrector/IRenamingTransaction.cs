@@ -4,6 +4,7 @@ namespace NorcusSheetsManager.NameCorrector
 {
     internal interface IRenamingTransaction
     {
+        [JsonPropertyName("TransactionGuid")]
         Guid Guid { get; }
         [JsonIgnore]
         string InvalidFullPath { get; }

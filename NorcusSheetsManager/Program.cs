@@ -19,7 +19,7 @@ namespace AutoPdfToImage
         {
             try
             {
-                Console.WriteLine("Norcus Client Manager " + VERSION);
+                Console.WriteLine("Norcus Sheets Manager " + VERSION);
                 Console.WriteLine("-------------------------");
                 Manager manager = new Manager();
                 manager.FullScan();

@@ -24,21 +24,25 @@ namespace NorcusSheetsManager.API
             }
         }
         private IRestServer _server;
-        private Server(int port, string secureKey, Corrector corrector)
+        private Server(int port, string secureKey, List<(Type type, object instance)> singletons)
         {
             RestServerBuilder serverBuilder = RestServerBuilder.From<Startup>();
             serverBuilder.Services.AddSingleton<ITokenAuthenticator>(new JWTAuthenticator(secureKey));
-            serverBuilder.Services.AddSingleton(corrector);
+            //serverBuilder.Services.AddSingleton(corrector);
+            foreach (var s in singletons)
+            {
+                serverBuilder.Services.AddSingleton(s.type, s.instance);
+            }
 
             _server = serverBuilder.Build();
             _server.Prefixes.Clear();
             _server.Prefixes.Add($"https://+:{port}/");
             //_server.Prefixes.Add($"http://localhost:{port}/");
         }
-        internal static void Initialize(int port, string secureKey, Corrector corrector) 
+        internal static void Initialize(int port, string secureKey, List<(Type type, object instance)> singletons) 
         {
             if (__instance != null) throw new Exception("Instace is already created.");
-            __instance = new Server(port, secureKey, corrector);
+            __instance = new Server(port, secureKey, singletons);
         }
         public static void Start() => _Instance._server.Start();
         public static void Stop() => _Instance._server.Stop();
