@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
     <AssemblyVersion>1.2</AssemblyVersion>
+    <Version>1.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +28,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="version">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
