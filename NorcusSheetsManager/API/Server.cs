@@ -38,6 +38,7 @@ namespace NorcusSheetsManager.API
             _server.Prefixes.Clear();
             _server.Prefixes.Add($"https://+:{port}/");
             //_server.Prefixes.Add($"http://localhost:{port}/");
+            _server.Router.BeforeRoutingAsync.Add(_BeforeRouting);
         }
         internal static void Initialize(int port, string secureKey, List<(Type type, object instance)> singletons) 
         {
@@ -46,5 +47,10 @@ namespace NorcusSheetsManager.API
         }
         public static void Start() => _Instance._server.Start();
         public static void Stop() => _Instance._server.Stop();
+        private Task _BeforeRouting(IHttpContext context)
+        {
+            context.Response.AddHeader("Access-Control-Allow-Origin", "*");
+            return Task.CompletedTask;
+        }
     }
 }
