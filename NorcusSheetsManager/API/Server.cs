@@ -50,6 +50,8 @@ namespace NorcusSheetsManager.API
         private Task _BeforeRouting(IHttpContext context)
         {
             context.Response.AddHeader("Access-Control-Allow-Origin", "*");
+            context.Response.AddHeader("Access-Control-Allow-Methods", "*");
+            context.Response.AddHeader("Access-Control-Allow-Headers", "*");
             return Task.CompletedTask;
         }
     }
