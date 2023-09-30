@@ -90,7 +90,7 @@ namespace NorcusSheetsManager.NameCorrector
 
                 if (transaction is null)
                 {
-                    transaction = new Transaction(BaseSheetsFolder, file, _GetSuggestionsForFile(file, Transaction.MaxSuggestionsCount));
+                    transaction = new Transaction(BaseSheetsFolder, file, _GetSuggestionsForFile(file, Transaction.MAX_SUGGESTIONS_COUNT));
                     _RenamingTransactions.Add(transaction);
                 }
                 transaction.SuggestionsCount = suggestionsCount;

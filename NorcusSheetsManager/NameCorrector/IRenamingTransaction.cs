@@ -2,20 +2,19 @@
 
 namespace NorcusSheetsManager.NameCorrector
 {
-    internal interface IRenamingTransaction
+    
+    internal interface IRenamingTransaction : IRenamingTransactionBase
     {
         [JsonPropertyName("TransactionGuid")]
-        Guid Guid { get; }
-        [JsonIgnore]
-        string InvalidFullPath { get; }
-        /// <summary>
-        /// Název chybného souboru. Cesta relativní k výchozí složce BaseSheetsFolder.
-        /// </summary>
-        string InvalidName { get; }
-        IEnumerable<IRenamingSuggestion> Suggestions { get; }
+        new Guid Guid { get; }
 
-        ITransactionResponse Commit(int suggestionIndex);
-        ITransactionResponse Commit(IRenamingSuggestion suggestion);
-        ITransactionResponse Commit(string newFileName);
+        [JsonPropertyName("Folder")]
+        string? InvalidRelativePath { get; }
+        
+        /// <summary>
+        /// Název chybného souboru.
+        /// </summary>
+        new string InvalidFileName { get; }
+        new IEnumerable<IRenamingSuggestion> Suggestions { get; }
     }
 }

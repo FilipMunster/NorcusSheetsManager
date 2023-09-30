@@ -65,10 +65,17 @@ namespace NorcusSheetsManager.API.Resources
             }
 
             IEnumerable<IRenamingTransaction>? transactions;
+            Type serializationType;
             if (String.IsNullOrEmpty(folder))
+            {
                 transactions = _Corrector.GetRenamingTransactionsForAllSubfolders(suggestionsCount);
+                serializationType = typeof(IEnumerable<IRenamingTransaction>);
+            }
             else
+            {
                 transactions = _Corrector.GetRenamingTransactions(folder, suggestionsCount);
+                serializationType = typeof(IEnumerable<IRenamingTransactionBase>);
+            }
 
             if (transactions is null)
             {
@@ -78,8 +85,54 @@ namespace NorcusSheetsManager.API.Resources
             }
 
             context.Response.StatusCode = HttpStatusCode.Ok;
-            await context.Response.SendResponseAsync(JsonSerializer.Serialize(transactions));
+            await context.Response.SendResponseAsync(JsonSerializer.Serialize(transactions, serializationType));
         }
+
+        [RestRoute("Get", "/count")]
+        [RestRoute("Get", "/{folder}/count")]
+        public async Task GetCount(IHttpContext context)
+        {
+            if (!_Authenticator.ValidateFromContext(context))
+            {
+                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                return;
+            }
+
+            if (!_Corrector.ReloadData())
+            {
+                context.Response.StatusCode = HttpStatusCode.InternalServerError;
+                await context.Response.SendResponseAsync($"No songs were loaded from the database.");
+                return;
+            }
+
+            context.Request.PathParameters.TryGetValue("folder", out string? folder);
+
+            // Kontrola práv uživatele
+            bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "uuid") ?? Guid.Empty.ToString());
+            if (!_Model.CanUserRead(isAdmin, userId, ref folder))
+            {
+                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                return;
+            }
+
+            IEnumerable<IRenamingTransaction>? transactions;
+            if (String.IsNullOrEmpty(folder))
+                transactions = _Corrector.GetRenamingTransactionsForAllSubfolders(1);
+            else
+                transactions = _Corrector.GetRenamingTransactions(folder, 1);
+
+            if (transactions is null)
+            {
+                context.Response.StatusCode = HttpStatusCode.BadRequest;
+                await context.Response.SendResponseAsync($"Bad request: Folder \"{folder ?? _Corrector.BaseSheetsFolder}\" does not exist.");
+                return;
+            }
+
+            context.Response.StatusCode = HttpStatusCode.Ok;
+            await context.Response.SendResponseAsync(transactions.Count().ToString());
+        }
+
         [RestRoute("Post", "fix-name")]
         public async Task FixName(IHttpContext context)
         {
