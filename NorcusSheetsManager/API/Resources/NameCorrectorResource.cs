@@ -50,7 +50,7 @@ namespace NorcusSheetsManager.API.Resources
 
             // Kontrola práv uživatele
             bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
-            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "UserId") ?? Guid.Empty.ToString());
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "uuid") ?? Guid.Empty.ToString());
             if (!_Model.CanUserRead(isAdmin, userId, ref folder))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
@@ -91,7 +91,7 @@ namespace NorcusSheetsManager.API.Resources
             
             // Kontrola práv uživatele
             bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
-            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "UserId"));
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "uuid"));
             if (!_Model.CanUserCommit(isAdmin, userId))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
