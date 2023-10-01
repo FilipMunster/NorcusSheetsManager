@@ -28,7 +28,7 @@ namespace NorcusSheetsManager.API
         {
             RestServerBuilder serverBuilder = RestServerBuilder.From<Startup>();
             serverBuilder.Services.AddSingleton<ITokenAuthenticator>(new JWTAuthenticator(secureKey));
-            //serverBuilder.Services.AddSingleton(corrector);
+
             foreach (var s in singletons)
             {
                 serverBuilder.Services.AddSingleton(s.type, s.instance);
