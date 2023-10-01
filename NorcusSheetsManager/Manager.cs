@@ -73,7 +73,7 @@ namespace NorcusSheetsManager
                 };
                 Server.Initialize(Config.APISettings.Port, Config.APISettings.Key, singletons);
                 Server.Start();
-                Logger.Debug("API server started.", _logger);
+                Logger.Debug($"API server started (port {Config.APISettings.Port}).", _logger);
             }
         }
         /// <summary>
