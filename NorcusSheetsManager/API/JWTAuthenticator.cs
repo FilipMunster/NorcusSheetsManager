@@ -31,7 +31,8 @@ namespace NorcusSheetsManager.API
             if (!context.Request.Headers.AllKeys.Contains("Authorization"))
                 return null;
 
-            string? jwtToken = context.Request.Headers.GetValue<string>("Authorization")?.Split(' ', StringSplitOptions.RemoveEmptyEntries)[1];
+            string? jwtToken = context.Request.Headers.GetValue<string>("Authorization")?
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)[1];
             return GetClaimValue(jwtToken ?? "", claimType);
         }
         public string? GetClaimValue(string token, string claimType)
@@ -85,9 +86,9 @@ namespace NorcusSheetsManager.API
             {
                 ValidateIssuer = false,
                 ValidateAudience = false,
+                ValidateLifetime = true,
                 IssuerSigningKey = _GetSymmetricSecurityKey(),
                 LifetimeValidator = _LifetimeValidator,
-                ValidateLifetime = false
             };
         }
         private SecurityKey _GetSymmetricSecurityKey()
@@ -99,7 +100,7 @@ namespace NorcusSheetsManager.API
         {
             if (!validationParameters.ValidateLifetime) return true;
             DateTime now = DateTime.UtcNow;
-            if (now > securityToken.ValidFrom && now < securityToken.ValidTo) return true;
+            if (now >= securityToken.ValidFrom && now <= securityToken.ValidTo) return true;
             return false;
         }
     }
