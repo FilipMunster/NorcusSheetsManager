@@ -2,7 +2,9 @@
 
 namespace NorcusSheetsManager.NameCorrector
 {
-    
+    /// <summary>
+    /// Oproti <see cref="IRenamingTransactionBase"/> má navíc <see cref="InvalidRelativePath"/>.
+    /// </summary>
     internal interface IRenamingTransaction : IRenamingTransactionBase
     {
         [JsonPropertyName("TransactionGuid")]
