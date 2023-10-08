@@ -144,7 +144,7 @@ namespace NorcusSheetsManager.API.Resources
             
             // Kontrola práv uživatele
             bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
-            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "uuid"));
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "uuid") ?? Guid.Empty.ToString());
             if (!_Model.CanUserCommit(isAdmin, userId))
             {
                 await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
