@@ -43,7 +43,7 @@ namespace NorcusSheetsManager.NameCorrector
             if (!invalidFullName.StartsWith(baseFolder))
                 InvalidRelativePath = Path.GetDirectoryName(invalidFullName);
             else
-                InvalidRelativePath = Path.GetDirectoryName(invalidFullName.Remove(0, baseFolder.Length));
+                InvalidRelativePath = Path.GetDirectoryName(invalidFullName.Remove(0, baseFolder.Length + 1));
 
             _SuggestionsList = new List<IRenamingSuggestion>(suggestions.Take(MAX_SUGGESTIONS_COUNT));
         }
