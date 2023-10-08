@@ -10,7 +10,7 @@ namespace NorcusSheetsManager.NameCorrector
     {
         public string InvalidFullPath { get; }
         public string FullPath { get; }
-        public string FileName { get; set; }
+        public string FileName { get; }
         public bool FileExists { get; }
         public double Distance { get; }
         public Suggestion(string invalidFullPath, string suggestedNameWithoutExt, double distance)
