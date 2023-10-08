@@ -35,7 +35,7 @@ namespace NorcusSheetsManager.API.Resources
         {
             if (!_Authenticator.ValidateFromContext(context))
             {
-                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                await context.Response.SendResponseAsync(HttpStatusCode.Unauthorized);
                 return;
             }
 
@@ -94,7 +94,7 @@ namespace NorcusSheetsManager.API.Resources
         {
             if (!_Authenticator.ValidateFromContext(context))
             {
-                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                await context.Response.SendResponseAsync(HttpStatusCode.Unauthorized);
                 return;
             }
 
@@ -138,7 +138,7 @@ namespace NorcusSheetsManager.API.Resources
         {
             if (!_Authenticator.ValidateFromContext(context))
             {
-                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                await context.Response.SendResponseAsync(HttpStatusCode.Unauthorized);
                 return;
             }
             
@@ -190,7 +190,7 @@ namespace NorcusSheetsManager.API.Resources
         {
             if (!_Authenticator.ValidateFromContext(context))
             {
-                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                await context.Response.SendResponseAsync(HttpStatusCode.Unauthorized);
                 return;
             }
 
@@ -229,7 +229,7 @@ namespace NorcusSheetsManager.API.Resources
         {
             if (!_Authenticator.ValidateFromContext(context))
             {
-                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                await context.Response.SendResponseAsync(HttpStatusCode.Unauthorized);
                 return;
             }
 
