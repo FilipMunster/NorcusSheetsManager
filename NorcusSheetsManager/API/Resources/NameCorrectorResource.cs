@@ -172,7 +172,7 @@ namespace NorcusSheetsManager.API.Resources
 
             var response = request.SuggestionIndex.HasValue ? 
                 _Corrector.CommitTransactionByGuid(request.TransactionGuid, (int)request.SuggestionIndex)
-                : _Corrector.CommitTransactionByGuid(request.TransactionGuid, request.FileName);
+                : _Corrector.CommitTransactionByGuid(request.TransactionGuid, request.FileName!);
 
             if (!response.Success)
             {
@@ -251,7 +251,7 @@ namespace NorcusSheetsManager.API.Resources
             }
 
             context.Request.PathParameters.TryGetValue("fileName", out string? fileName);
-            IRenamingSuggestion suggestion = new Suggestion(trans.InvalidFullPath, fileName, 0);
+            IRenamingSuggestion suggestion = new Suggestion(trans!.InvalidFullPath, fileName ?? "", 0);
             context.Response.StatusCode = HttpStatusCode.Ok;
             await context.Response.SendResponseAsync(JsonSerializer.Serialize(suggestion));
         }
