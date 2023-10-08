@@ -92,5 +92,30 @@ namespace NorcusSheetsManager.NameCorrector
             _SuggestionsList.Add(suggestion);
             return Commit(suggestion);
         }
+
+        /// <summary>
+        /// Vymaže chybný soubor a nastaví transakci jako commited
+        /// </summary>
+        /// <returns></returns>
+        public ITransactionResponse Delete()
+        {
+            if (_IsCommited || _SuggestionsList is null)
+                return new TransactionResponse(false, "Transaction is already commited.");
+
+            if (!File.Exists(InvalidFullPath))
+                return new TransactionResponse(false, $"File \"{InvalidFullPath}\" does not exist.");
+
+            try
+            {
+                File.Delete(InvalidFullPath);
+            }
+            catch (Exception e)
+            {
+                return new TransactionResponse(false, $"File \"{InvalidFullPath}\" could not be deleted ({e.Message})");
+            }
+
+            _IsCommited = true;
+            return new TransactionResponse(true);
+        }
     }
 }

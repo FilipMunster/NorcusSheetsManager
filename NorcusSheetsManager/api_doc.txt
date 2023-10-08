@@ -63,6 +63,10 @@ POST: api/v1/corrector/fix-name
 			  Jinak se použije ta hodnota, která není null.
 	- Požadavky: NsmAdmin == "true" nebo uuid uživatele musí existovat
 
+DELETE: api/v1/corrector/{transaction}
+	- vymaže chybný soubor transakce a ukončí transakci
+	- Požadavky: NsmAdmin == "true" nebo uuid uživatele musí existovat
+
 POST: api/v1/manager/scan
 	- spustí funkci Scan (kontrola, zda ke každému PDf existuje obrázek)
 	- Požadavky: NsmAdmin == "true"

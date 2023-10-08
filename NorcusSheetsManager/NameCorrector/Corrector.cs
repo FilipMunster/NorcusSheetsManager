@@ -120,6 +120,24 @@ namespace NorcusSheetsManager.NameCorrector
 
             return response;
         }
+
+        /// <summary>
+        /// Vymaže chybný soubor transakce a transakci commituje.
+        /// </summary>
+        /// <param name="transactionGuid"></param>
+        /// <returns></returns>
+        public ITransactionResponse DeleteTransaction(Guid transactionGuid)
+        {
+            Transaction? transaction = _RenamingTransactions.FirstOrDefault(t => t.Guid == transactionGuid);
+            var response = transaction?.Delete()
+                ?? new TransactionResponse(false, $"Transaction {transactionGuid} does not exist");
+
+            if (transaction is not null)
+                _RenamingTransactions.Remove(transaction);
+
+            return response;
+        }
+
         public IRenamingTransaction? GetTransactionByGuid(Guid transactionGuid) 
             => _RenamingTransactions.FirstOrDefault(t => t.Guid == transactionGuid);
 

@@ -184,6 +184,46 @@ namespace NorcusSheetsManager.API.Resources
             context.Response.StatusCode = HttpStatusCode.Ok;
             await context.Response.SendResponseAsync();
         }
+
+        [RestRoute("Delete", "{transaction}")]
+        public async Task DeleteFile(IHttpContext context)
+        {
+            if (!_Authenticator.ValidateFromContext(context))
+            {
+                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                return;
+            }
+
+            // Kontrola práv uživatele
+            bool isAdmin = _Authenticator.ValidateFromContext(context, new Claim("NsmAdmin", "true"));
+            Guid userId = new Guid(_Authenticator.GetClaimValue(context, "uuid") ?? Guid.Empty.ToString());
+            if (!_Model.CanUserCommit(isAdmin, userId))
+            {
+                await context.Response.SendResponseAsync(HttpStatusCode.Forbidden);
+                return;
+            }
+
+            context.Request.PathParameters.TryGetValue("transaction", out string? guidString);
+            if (!Guid.TryParse(guidString, out Guid guid))
+            {
+                context.Response.StatusCode = HttpStatusCode.BadRequest;
+                await context.Response.SendResponseAsync($"Bad request: Parameter \"{guidString}\" is not valid Guid.");
+                return;
+            }
+
+            var response = _Corrector.DeleteTransaction(guid);
+
+            if (!response.Success)
+            {
+                context.Response.StatusCode = HttpStatusCode.InternalServerError;
+                await context.Response.SendResponseAsync(response.Message);
+                return;
+            }
+
+            context.Response.StatusCode = HttpStatusCode.Ok;
+            await context.Response.SendResponseAsync();
+        }
+
         [RestRoute("Get", "/file-exists/{transaction}/{fileName}")]
         public async Task CheckFileExists(IHttpContext context)
         {
